@@ -196,13 +196,13 @@ async def slack_webhook(
 
     # Only handle message events
     if event_type != "message":
-        logger.debug("Ignoring non-message event", event_type=event_type)
+        logger.info("Ignoring non-message event", event_type=event_type)
         return Response(status_code=200)
 
     # Check if message should be processed
     should_process, reason = should_process_message(event_data)
     if not should_process:
-        logger.debug("Filtered message", reason=reason)
+        logger.info("Filtered message", reason=reason)
         return Response(status_code=200)
 
     # Extract user info for rate limiting
