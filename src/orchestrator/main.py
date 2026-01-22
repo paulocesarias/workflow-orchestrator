@@ -7,8 +7,10 @@ from fastapi import FastAPI
 
 from orchestrator.api.health import router as health_router
 from orchestrator.api.metrics import router as metrics_router
+from orchestrator.api.tasks import router as tasks_router
 from orchestrator.api.webhooks.slack import router as slack_router
 from orchestrator.config import get_settings
+from orchestrator.middleware.error_handler import ErrorHandlerMiddleware
 from orchestrator.utils.logging import setup_logging
 
 logger = structlog.get_logger()
@@ -44,9 +46,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Add middleware
+    app.add_middleware(ErrorHandlerMiddleware)
+
     # Include routers
     app.include_router(health_router)
     app.include_router(metrics_router)
+    app.include_router(tasks_router)
     app.include_router(slack_router)
 
     return app
