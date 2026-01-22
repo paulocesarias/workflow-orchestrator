@@ -3,7 +3,7 @@
 import subprocess
 import time
 from dataclasses import dataclass
-from typing import Iterator
+from collections.abc import Iterator
 
 import structlog
 

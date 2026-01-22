@@ -3,7 +3,7 @@
 import json
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Iterator
+from collections.abc import Iterator
 
 import structlog
 
