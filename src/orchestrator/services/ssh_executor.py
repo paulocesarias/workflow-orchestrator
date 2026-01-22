@@ -12,6 +12,7 @@ logger = structlog.get_logger()
 
 # Default SSH settings
 DEFAULT_SSH_HOST = "72.61.78.57"
+DEFAULT_SSH_PORT = 28473
 DEFAULT_SSH_USER = "paulo"
 DEFAULT_SSH_KEY_PATH = "/app/secrets/ssh_key"
 SSH_TIMEOUT_SECONDS = 600  # 10 minutes max
@@ -36,10 +37,12 @@ class SSHExecutor:
     def __init__(
         self,
         host: str = DEFAULT_SSH_HOST,
+        port: int = DEFAULT_SSH_PORT,
         user: str | None = None,
         key_path: str = DEFAULT_SSH_KEY_PATH,
     ):
         self.host = host
+        self.port = port
         self.user = user or DEFAULT_SSH_USER
         self.key_path = key_path
 
@@ -98,6 +101,7 @@ class SSHExecutor:
         ssh_cmd = [
             "ssh",
             "-i", self.key_path,
+            "-p", str(self.port),
             "-o", "StrictHostKeyChecking=no",
             "-o", "UserKnownHostsFile=/dev/null",
             "-o", "ConnectTimeout=10",
@@ -109,6 +113,7 @@ class SSHExecutor:
         logger.info(
             "Executing Claude via SSH",
             host=self.host,
+            port=self.port,
             user=self.user,
             working_dir=working_dir,
             channel=channel,
