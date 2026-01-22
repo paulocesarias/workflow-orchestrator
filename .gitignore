@@ -76,7 +76,6 @@ dmypy.json
 
 # uv
 .python-version
-uv.lock
 
 # Local development
 .env.local
