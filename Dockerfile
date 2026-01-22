@@ -31,8 +31,9 @@ RUN groupadd -r orchestrator && useradd -r -g orchestrator orchestrator
 
 WORKDIR /app
 
-# Copy virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
+# Copy virtual environment and source from builder
+COPY --from=builder --chown=orchestrator:orchestrator /app/.venv /app/.venv
+COPY --from=builder --chown=orchestrator:orchestrator /app/src /app/src
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
