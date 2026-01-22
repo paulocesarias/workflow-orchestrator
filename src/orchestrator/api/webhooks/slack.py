@@ -9,6 +9,7 @@ import uuid
 import structlog
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
+from orchestrator.api.metrics import RATE_LIMIT_HITS, REQUEST_COUNT
 from orchestrator.config import get_bot_config, get_settings
 from orchestrator.models.slack import SlackEvent, SlackFile
 from orchestrator.utils.rate_limit import RateLimiter
@@ -221,8 +222,9 @@ async def slack_webhook(
 
     # Rate limiting
     rate_key = f"{channel_id}:{user_id}"
-    if not rate_limiter.is_allowed(rate_key, bot_name="orchestrator"):
-        logger.warning("Rate limited", user=user_id, channel=channel_id)
+    if not rate_limiter.is_allowed(rate_key, bot_name=bot_config.name):
+        logger.warning("Rate limited", user=user_id, channel=channel_id, bot=bot_config.name)
+        RATE_LIMIT_HITS.labels(bot=bot_config.name, user=user_id).inc()
         # Still return 200 to Slack, but don't process
         return Response(status_code=200)
 
@@ -268,6 +270,9 @@ async def slack_webhook(
         text_length=len(text),
     )
 
+    # Track request for this bot
+    REQUEST_COUNT.labels(bot=bot_config.name, endpoint="/webhooks/slack", status="2xx").inc()
+
     # Enqueue Celery task for async processing
     from orchestrator.tasks.slack import process_slack_message
 
@@ -275,6 +280,7 @@ async def slack_webhook(
         event=event.model_dump(),
         session_id=session_id,
         working_dir=bot_config.working_dir,
+        bot_name=bot_config.name,
     )
 
     # Return 200 immediately (Slack expects response within 3 seconds)

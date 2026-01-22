@@ -4,6 +4,7 @@ from fastapi import APIRouter, Response
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
+    Gauge,
     Histogram,
     generate_latest,
 )
@@ -34,6 +35,24 @@ SLACK_API_CALLS = Counter(
     "orchestrator_slack_api_calls_total",
     "Total Slack API calls",
     ["method", "status"],
+)
+
+CLAUDE_TOKENS = Counter(
+    "orchestrator_claude_tokens_total",
+    "Total Claude tokens used",
+    ["bot", "direction"],  # direction: input or output
+)
+
+CLAUDE_COST = Counter(
+    "orchestrator_claude_cost_usd_total",
+    "Total Claude cost in USD",
+    ["bot"],
+)
+
+ACTIVE_TASKS = Gauge(
+    "orchestrator_active_tasks",
+    "Number of currently active tasks",
+    ["bot"],
 )
 
 
