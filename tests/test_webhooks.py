@@ -2,6 +2,9 @@
 
 from unittest.mock import patch
 
+# Use the Testing channel from bot config for tests
+TEST_CHANNEL = "C0A3K9JUK8V"
+
 
 def test_url_verification(client):
     """Test Slack URL verification challenge."""
@@ -83,7 +86,7 @@ def test_user_message_accepted(mock_task, client):
             "event": {
                 "type": "message",
                 "user": "U123",
-                "channel": "C123",
+                "channel": TEST_CHANNEL,
                 "text": "Hello bot",
                 "ts": "1234567890.123456",
             },
@@ -91,6 +94,10 @@ def test_user_message_accepted(mock_task, client):
     )
     assert response.status_code == 200
     mock_task.assert_called_once()
+    # Check that working_dir is passed from bot config
+    call_args = mock_task.call_args
+    working_dir = call_args.kwargs.get("working_dir") or call_args[1].get("working_dir")
+    assert working_dir == "/home/paulo"  # Testing channel uses /home/paulo
 
 
 @patch("orchestrator.tasks.slack.process_slack_message.delay")
@@ -105,7 +112,7 @@ def test_file_share_accepted(mock_task, client):
                 "type": "message",
                 "subtype": "file_share",
                 "user": "U123",
-                "channel": "C123",
+                "channel": TEST_CHANNEL,
                 "text": "Check this image",
                 "ts": "1234567890.123456",
                 "files": [
@@ -135,7 +142,7 @@ def test_mention_stripped(mock_task, client):
             "event": {
                 "type": "message",
                 "user": "U123",
-                "channel": "C123",
+                "channel": TEST_CHANNEL,
                 "text": "<@U456> Hello bot",
                 "ts": "1234567890.123456",
             },
@@ -159,7 +166,7 @@ def test_empty_message_filtered(client):
             "event": {
                 "type": "message",
                 "user": "U123",
-                "channel": "C123",
+                "channel": TEST_CHANNEL,
                 "text": "<@U456>",  # Only a mention, becomes empty after strip
                 "ts": "1234567890.123456",
             },
@@ -179,7 +186,7 @@ def test_thread_message(mock_task, client):
             "event": {
                 "type": "message",
                 "user": "U123",
-                "channel": "C123",
+                "channel": TEST_CHANNEL,
                 "text": "Reply in thread",
                 "ts": "1234567890.999999",
                 "thread_ts": "1234567890.123456",
@@ -208,3 +215,24 @@ def test_non_message_event_ignored(client):
         },
     )
     assert response.status_code == 200
+
+
+@patch("orchestrator.tasks.slack.process_slack_message.delay")
+def test_unconfigured_channel_ignored(mock_task, client):
+    """Test that messages from unconfigured channels are ignored."""
+    response = client.post(
+        "/webhooks/slack",
+        json={
+            "type": "event_callback",
+            "team_id": "T123",
+            "event": {
+                "type": "message",
+                "user": "U123",
+                "channel": "CUNCONFIGURED",  # Not in bot config
+                "text": "Hello from unknown channel",
+                "ts": "1234567890.123456",
+            },
+        },
+    )
+    assert response.status_code == 200
+    mock_task.assert_not_called()  # Task should NOT be queued

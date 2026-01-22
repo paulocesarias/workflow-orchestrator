@@ -9,7 +9,7 @@ import uuid
 import structlog
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
-from orchestrator.config import get_settings
+from orchestrator.config import get_bot_config, get_settings
 from orchestrator.models.slack import SlackEvent, SlackFile
 from orchestrator.utils.rate_limit import RateLimiter
 
@@ -213,6 +213,12 @@ async def slack_webhook(
         logger.warning("No user_id in message event")
         return Response(status_code=200)
 
+    # Get bot configuration for this channel
+    bot_config = get_bot_config(channel_id)
+    if bot_config is None:
+        logger.warning("No bot configured for channel", channel_id=channel_id)
+        return Response(status_code=200)
+
     # Rate limiting
     rate_key = f"{channel_id}:{user_id}"
     if not rate_limiter.is_allowed(rate_key, bot_name="orchestrator"):
@@ -252,9 +258,11 @@ async def slack_webhook(
 
     logger.info(
         "Processing Slack message",
+        bot_name=bot_config.name,
         channel=event.channel_id,
         user=event.user_id,
         session_id=session_id,
+        working_dir=bot_config.working_dir,
         has_files=len(files) > 0,
         file_count=len(files),
         text_length=len(text),
@@ -266,6 +274,7 @@ async def slack_webhook(
     process_slack_message.delay(
         event=event.model_dump(),
         session_id=session_id,
+        working_dir=bot_config.working_dir,
     )
 
     # Return 200 immediately (Slack expects response within 3 seconds)
