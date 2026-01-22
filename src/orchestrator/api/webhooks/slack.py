@@ -67,7 +67,7 @@ def verify_slack_signature(
     signing_secret: str,
 ) -> bool:
     """Verify Slack request signature for security."""
-    if not signing_secret:
+    if not signing_secret or signing_secret == "placeholder":
         logger.warning("No Slack signing secret configured, skipping verification")
         return True
 
