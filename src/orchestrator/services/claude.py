@@ -143,7 +143,8 @@ class SlackMessenger:
 def download_file(token: str, url: str, dest_path: str) -> tuple[bool, str | None]:
     """Download a file from Slack with size limit."""
     try:
-        with httpx.stream("GET", url, headers={"Authorization": f"Bearer {token}"}, timeout=60) as response:
+        headers = {"Authorization": f"Bearer {token}"}
+        with httpx.stream("GET", url, headers=headers, timeout=60) as response:
             if response.status_code != 200:
                 return False, f"HTTP {response.status_code}"
 
@@ -269,13 +270,12 @@ class ClaudeProcessor:
         files_text = "\n".join(file_instructions)
 
         if message:
-            return f"""The user has attached the following file(s). Please read and analyze them as part of your response:
-
-{files_text}
-
-User's message: {message}"""
+            intro = "The user has attached the following file(s). "
+            intro += "Please read and analyze them as part of your response:"
+            return f"{intro}\n\n{files_text}\n\nUser's message: {message}"
         else:
-            return f"""The user has attached the following file(s). Please read and analyze them:
+            intro = "The user has attached the following file(s). Please read and analyze them:"
+            return f"""{intro}
 
 {files_text}"""
 

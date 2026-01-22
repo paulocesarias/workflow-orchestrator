@@ -1,10 +1,10 @@
 """Health check endpoints."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import redis
 import structlog
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
 
 from orchestrator.config import get_settings
 
@@ -29,7 +29,7 @@ async def health_check() -> dict:
     """Liveness probe - is the app running?"""
     return {
         "status": "healthy",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -44,7 +44,7 @@ async def readiness_check() -> dict:
         "checks": {
             "redis": "ok" if redis_ok else "failed",
         },
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 

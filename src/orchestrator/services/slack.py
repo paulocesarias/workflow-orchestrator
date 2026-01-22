@@ -38,7 +38,8 @@ class SlackClient:
         response = await self._client.post("/chat.postMessage", json=payload)
         data = response.json()
 
-        SLACK_API_CALLS.labels(method="chat.postMessage", status="ok" if data.get("ok") else "error").inc()
+        status = "ok" if data.get("ok") else "error"
+        SLACK_API_CALLS.labels(method="chat.postMessage", status=status).inc()
 
         if not data.get("ok"):
             logger.error("Slack API error", method="chat.postMessage", error=data.get("error"))
@@ -58,7 +59,8 @@ class SlackClient:
         )
         data = response.json()
 
-        SLACK_API_CALLS.labels(method="chat.update", status="ok" if data.get("ok") else "error").inc()
+        status = "ok" if data.get("ok") else "error"
+        SLACK_API_CALLS.labels(method="chat.update", status=status).inc()
 
         return data
 
@@ -70,7 +72,8 @@ class SlackClient:
         )
         data = response.json()
 
-        SLACK_API_CALLS.labels(method="reactions.add", status="ok" if data.get("ok") else "error").inc()
+        status = "ok" if data.get("ok") else "error"
+        SLACK_API_CALLS.labels(method="reactions.add", status=status).inc()
 
         return data
 
@@ -82,7 +85,8 @@ class SlackClient:
         )
         data = response.json()
 
-        SLACK_API_CALLS.labels(method="reactions.remove", status="ok" if data.get("ok") else "error").inc()
+        status = "ok" if data.get("ok") else "error"
+        SLACK_API_CALLS.labels(method="reactions.remove", status=status).inc()
 
         return data
 

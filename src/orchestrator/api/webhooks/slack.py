@@ -176,15 +176,14 @@ async def slack_webhook(
     settings = get_settings()
 
     # Verify Slack signature (security)
-    if settings.slack_signing_secret:
-        if not verify_slack_signature(
-            body_bytes,
-            x_slack_request_timestamp,
-            x_slack_signature,
-            settings.slack_signing_secret,
-        ):
-            logger.warning("Invalid Slack signature")
-            raise HTTPException(status_code=401, detail="Invalid signature")
+    if settings.slack_signing_secret and not verify_slack_signature(
+        body_bytes,
+        x_slack_request_timestamp,
+        x_slack_signature,
+        settings.slack_signing_secret,
+    ):
+        logger.warning("Invalid Slack signature")
+        raise HTTPException(status_code=401, detail="Invalid signature")
 
     # Handle URL verification challenge
     if body.get("type") == "url_verification":

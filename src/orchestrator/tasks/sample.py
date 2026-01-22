@@ -11,11 +11,11 @@ logger = structlog.get_logger()
 @shared_task(bind=True, base=BaseTask)
 def add(self, x: int, y: int) -> int:
     """Simple task to verify Celery is working.
-    
+
     Args:
         x: First number
         y: Second number
-        
+
     Returns:
         Sum of x and y
     """
@@ -28,12 +28,12 @@ def add(self, x: int, y: int) -> int:
 @shared_task(bind=True, base=BaseTask)
 def process_message(self, message: str, channel_id: str, thread_ts: str | None = None) -> dict:
     """Process a message - placeholder for Claude integration.
-    
+
     Args:
         message: The message content
         channel_id: Slack channel ID
         thread_ts: Thread timestamp if replying to a thread
-        
+
     Returns:
         Processing result dictionary
     """
@@ -44,7 +44,7 @@ def process_message(self, message: str, channel_id: str, thread_ts: str | None =
         thread_ts=thread_ts,
         message_length=len(message),
     )
-    
+
     # Placeholder - actual Claude integration will be in OPS-84
     result = {
         "status": "processed",
@@ -52,6 +52,6 @@ def process_message(self, message: str, channel_id: str, thread_ts: str | None =
         "thread_ts": thread_ts,
         "message_length": len(message),
     }
-    
+
     logger.info("Message processing completed", result=result)
     return result

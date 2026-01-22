@@ -1,7 +1,7 @@
 """Base Celery task with common functionality."""
 
-from celery import Task
 import structlog
+from celery import Task
 
 logger = structlog.get_logger()
 

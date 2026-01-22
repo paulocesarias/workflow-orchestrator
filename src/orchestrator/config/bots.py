@@ -1,7 +1,7 @@
 """Bot configuration model and registry."""
 
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 
 import structlog
 
@@ -78,7 +78,7 @@ BOT_CONFIGS = {
 }
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_bot_config(channel_id: str) -> BotConfig | None:
     """Get bot configuration for a channel.
 
