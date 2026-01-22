@@ -23,6 +23,9 @@ ignore = [
 
 [lint.per-file-ignores]
 "tests/*" = ["ARG"]  # Unused arguments in tests are OK (fixtures)
+"src/orchestrator/tasks/base.py" = ["ARG002"]  # Celery callbacks require specific signatures
+"src/orchestrator/main.py" = ["ARG001"]  # FastAPI lifespan requires app argument
+"src/orchestrator/services/claude.py" = ["ARG002"]  # Claude processor method signatures
 
 [format]
 quote-style = "double"
