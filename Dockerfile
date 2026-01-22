@@ -26,8 +26,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Runtime stage
 FROM python:3.12-slim AS runtime
 
+# Install SSH client for remote execution
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user
 RUN groupadd -r orchestrator && useradd -r -g orchestrator orchestrator
+
+# Create secrets directory for SSH key
+RUN mkdir -p /app/secrets && chown orchestrator:orchestrator /app/secrets
 
 WORKDIR /app
 

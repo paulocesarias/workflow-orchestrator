@@ -3,9 +3,9 @@
 import structlog
 from celery import shared_task
 
-from orchestrator.api.metrics import ACTIVE_TASKS, CLAUDE_COST, CLAUDE_TOKENS, TASK_DURATION
+from orchestrator.api.metrics import ACTIVE_TASKS, TASK_DURATION
 from orchestrator.config import get_settings
-from orchestrator.services.claude import ClaudeProcessor
+from orchestrator.services.ssh_executor import SSHExecutor
 from orchestrator.tasks.base import BaseTask
 
 logger = structlog.get_logger()
@@ -19,19 +19,21 @@ def process_slack_message(
     working_dir: str = "/home/paulo",
     bot_name: str = "unknown",
 ) -> dict:
-    """Process an incoming Slack message using Claude CLI.
+    """Process an incoming Slack message by executing Claude on remote host.
 
-    Downloads file attachments, executes Claude CLI with streaming,
-    and sends responses back to Slack.
+    This mirrors the n8n approach:
+    1. SSH to the VPS
+    2. Run claude-streamer.py with the message
+    3. The script handles all Claude interaction and Slack streaming
 
     Args:
         event: Slack event data (channel_id, user_id, text, ts, thread_ts, files)
         session_id: Deterministic session UUID for conversation continuity
-        working_dir: Working directory for Claude CLI execution
+        working_dir: Working directory for Claude CLI execution on remote host
         bot_name: Name of the bot for metrics tracking
 
     Returns:
-        Processing result dictionary with stats
+        Processing result dictionary
     """
     settings = get_settings()
     slack_token = settings.slack_bot_token
@@ -50,8 +52,12 @@ def process_slack_message(
     # Use thread_ts if in thread, otherwise use message ts as thread parent
     reply_ts = thread_ts or ts
 
+    # Determine SSH user from working directory
+    # e.g., /home/paulo -> paulo, /home/popy -> popy
+    ssh_user = working_dir.split("/")[-1] if working_dir.startswith("/home/") else "paulo"
+
     logger.info(
-        "Processing Slack message with Claude",
+        "Processing Slack message via SSH",
         task_id=self.request.id,
         bot_name=bot_name,
         channel_id=channel_id,
@@ -61,53 +67,47 @@ def process_slack_message(
         file_count=len(files),
         is_thread=thread_ts is not None,
         working_dir=working_dir,
+        ssh_user=ssh_user,
     )
 
     # Track active task
     ACTIVE_TASKS.labels(bot=bot_name).inc()
 
     try:
-        # Create processor and run
-        processor = ClaudeProcessor(
+        # Create SSH executor and run
+        executor = SSHExecutor(user=ssh_user)
+
+        result = executor.execute_claude_streamer(
             slack_token=slack_token,
             channel=channel_id,
             thread_ts=reply_ts,
             message_ts=ts,
             session_id=session_id,
+            message=text,
             working_dir=working_dir,
+            files=files if files else None,
         )
 
-        stats = processor.process(message=text, files=files)
-
-        # Track metrics
+        # Track duration metric
         TASK_DURATION.labels(bot=bot_name, task_type="claude_message").observe(
-            stats.duration_ms / 1000
+            result.duration_ms / 1000
         )
-        CLAUDE_TOKENS.labels(bot=bot_name, direction="input").inc(stats.input_tokens)
-        CLAUDE_TOKENS.labels(bot=bot_name, direction="output").inc(stats.output_tokens)
-        CLAUDE_COST.labels(bot=bot_name).inc(stats.cost_usd)
 
-        result = {
-            "status": "completed",
+        response = {
+            "status": "completed" if result.success else "error",
             "channel_id": channel_id,
             "user_id": user_id,
             "session_id": session_id,
             "reply_ts": reply_ts,
             "bot_name": bot_name,
-            "stats": {
-                "duration_ms": stats.duration_ms,
-                "cost_usd": stats.cost_usd,
-                "input_tokens": stats.input_tokens,
-                "output_tokens": stats.output_tokens,
-                "reads": stats.reads,
-                "edits": stats.edits,
-                "writes": stats.writes,
-                "commands": stats.commands,
-            },
+            "duration_ms": result.duration_ms,
         }
 
-        logger.info("Slack message processed with Claude", result=result)
-        return result
+        if result.error:
+            response["error"] = result.error
+
+        logger.info("Slack message processed via SSH", result=response)
+        return response
 
     finally:
         ACTIVE_TASKS.labels(bot=bot_name).dec()
